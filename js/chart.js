@@ -1,5 +1,5 @@
-// Lista dei colori in tonalità pastello: red, green, yellow, blue, black, white, gray, orange, brown, purple
-var colour = ["#E74C3C", "#27AE60", "#F1C40F", "#2980B9", "#2C3E50", "#ECF0F1", "#95A5A6", "#E67E22", "#795548", "#9B59B6"];
+// Lista dei colori in tonalità pastello: red, green, yellow, blue, black, pink, gray, orange, brown, purple
+var colour = ["#E74C3C", "#27AE60", "#F1C40F", "#2980B9", "#5D6D7E", "#F6CEE3", "#B2BABB", "#EB984E", "#795548", "#9B59B6"];
 var margin = {top: 20, right: 20, bottom: 30, left: 40}; // margini
 var updateTime = 2000; // tempo di transizione per le animazioni
 
@@ -15,6 +15,10 @@ var minDim = 0.5;
 var scalePositionX = d3.scaleLinear();
 var scalePositionY = d3.scaleLinear();
 var scaleDimension = d3.scaleLinear();
+
+// Definizione delle variabili degli assi
+var xAxis = null
+var yAxis = null
 
 // Definizione della superficie utilizzabile
 var width = totalWidth - margin.left - margin.right;
@@ -34,24 +38,45 @@ var val = [];
 // individua il massimo e minimo e definisce i valori
 // di input e output delle scale
 function calcolaScalePosition(){
-    var max = 0;
-    var min = null;
+    var Xmax = 0;
+    var Xmin = null;
+    var Ymax = 0;
+    var Ymin = null;
+    var dimMax = 0;
+    var dimMin = null;
     for(let i = 0; i<val.length; i++){
         for(let c = 2; c<val[i].length; c++){  //si ignorano le posizioni zero e uno che contengono il valore relativo all'ID e il codice colore
-            if(val[i][c]>max) max = val[i][c];
-            if(min == null) min = val[i][c];
-            if(val[i][c]<min) min = val[i][c];
+            if(c==2){  // variabile relativa all'asse x
+                if(val[i][c]>Xmax) Xmax = val[i][c];
+                if(Xmin == null) Xmin = val[i][c];
+                if(val[i][c]<Xmin) Xmin = val[i][c];
+            }
+            else if(c==3){  // variabile relativa all'asse y
+                if(val[i][c]>Ymax) Ymax = val[i][c];
+                if(Ymin == null) Ymin = val[i][c];
+                if(val[i][c]<Ymin) Ymin = val[i][c];
+            }
+            else{  // variabili relative alle dimensioni
+                if(val[i][c]>dimMax) dimMax = val[i][c];
+                if(dimMin == null) dimMin = val[i][c];
+                if(val[i][c]<dimMin) dimMin = val[i][c];
+            }
         }
     }
     // scala per l'asse x
-    scalePositionX.domain([min, max]);
+    scalePositionX.domain([Xmin, Xmax]);
     scalePositionX.range([60, width-60]); //il range di output è ridotto di 60 per evitare che le farfalle fuoriescano dai bordi
     // scala per l'asse y
-    scalePositionY.domain([min, max]);
-    scalePositionY.range([60, height-60]);
+    scalePositionY.domain([Ymin, Ymax]);
+    scalePositionY.range([height-60, 60]);
     // scala per le dimensioni
-    scaleDimension.domain([min, max]);
+    scaleDimension.domain([dimMin, dimMax]);
     scaleDimension.range([minDim, maxDim]);
+
+    // assegnazione scala asse x
+    xAxis = d3.axisBottom(scalePositionX);
+    // assegnazione scala asse y
+    yAxis = d3.axisLeft(scalePositionY);
 }
 
 // Funzione che dati i valori del file json popola
@@ -73,19 +98,44 @@ function popolaValori(data){
     calcolaScalePosition();
 }
 
-// Funzione che ruota di una posizione i valori dell'array passato tramite id
-function ruotaValori(id){
-    let a = val[id][2];
-    for(let i = 2; i<6; i++){  // si ignorano gli elementi in posizione zero ed uno
-        val[id][i] = val[id][i+1];
-    }
-    val[id][6] = a;
+// Funzione che disegna gli assi x e y
+function drawAxes(){
+
+    // disegna l'asse x
+    svg.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxis);
+
+    // disegna l'asse y
+    svg.append("g")
+        .attr("class", "y axis")
+        .call(yAxis);
 }
 
-// Funzione attivata dal click sulla farfalla che invoca la rotazione
-// dei valori per l'ID passato e l'aggiornamento della rappresentazione
-function action(id){
-    ruotaValori(id);
+// Funzione che ruota di una posizione i valori dell'array "val"
+function ruotaValori(){
+    for(let c = 0; c<val.length; c++){
+        let a = val[c][2];
+        for(let i = 2; i<6; i++){  // si ignorano gli elementi in posizione zero ed uno
+            val[c][i] = val[c][i+1];
+        }
+        val[c][6] = a;
+    }
+}
+
+function updateAxes(){
+    // ".y.axis" selects elements that have both classes "y" and "axis", that is: class="y axis"
+    svg.select(".y.axis").transition().duration(updateTime/2).call(yAxis);
+    svg.select(".x.axis").transition().duration(updateTime/2).call(xAxis);
+}
+
+// Funzione attivata dal click sulla farfalla, che invoca la rotazione
+// dei valori e l'aggiornamento della rappresentazione
+function action(){
+    ruotaValori();
+    calcolaScalePosition();
+    updateAxes();
     updateDraw();
 }
 
@@ -116,7 +166,7 @@ function updateDraw(){
         .attr("fill", function(d) {return getColour(d[1])})
         .attr("stroke-width", "1")
         .attr("stroke", "black")
-        .attr("onclick", function(d) { return "action("+d[0]+")"});
+        .attr("onclick", function(d) { return "action()"});
 
     ali.transition().duration(updateTime)
     .attr("transform", function(d) { return "translate("+scalePositionX(d[2])+","+scalePositionY(d[3])+") scale("+scaleDimension(d[4])+")" })
@@ -136,7 +186,7 @@ function updateDraw(){
         .attr("fill", function(d) {return getColour(d[1])})
         .attr("stroke-width", "1")
         .attr("stroke", "black")
-        .attr("onclick", function(d) { return "action("+d[0]+")"});
+        .attr("onclick", function(d) { return "action()"});
 
     addomi.transition().duration(updateTime)
     .attr("transform", function(d) { return "translate("+scalePositionX(d[2])+","+scalePositionY(d[3])+") scale("+scaleDimension(d[6])+")" })
@@ -156,7 +206,7 @@ function updateDraw(){
         .attr("fill", function(d) {return getColour(d[1])})
         .attr("stroke-width", "1")
         .attr("stroke", "black")
-        .attr("onclick", function(d) { return "action("+d[0]+")"});
+        .attr("onclick", function(d) { return "action()"});
 
     teste.transition().duration(updateTime)
     .attr("transform", function(d) { return "translate("+scalePositionX(d[2])+","+scalePositionY(d[3])+") scale("+scaleDimension(d[5])+")" })
@@ -166,6 +216,8 @@ function updateDraw(){
 d3.json("data/dataset.json").then(function(data) {
 
     popolaValori(data);
+
+    drawAxes();
 
     updateDraw();
 

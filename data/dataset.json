@@ -27,7 +27,7 @@
       {
         "first": 9,
         "second": 9,
-        "third": 1,
+        "third": 8,
         "fourth": 7,
         "fifth": 9
       }
@@ -58,7 +58,7 @@
     "butt_id": "5",
     "variables":
       {
-        "first": 1,
+        "first": 2,
         "second": 8,
         "third": 2,
         "fourth": 6,
