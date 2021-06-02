@@ -34,6 +34,9 @@ var svg = d3.select("body").append("svg")
 // di 5 elementi relativi alle 5 variabili date
 var val = [];
 
+// Array dei nomi delle 5 variabili che verranno acquisiti dal file JSON
+var varName = [];
+
 // Funzione che legge tutti i valori dati in val,
 // individua il massimo e minimo e definisce i valori
 // di input e output delle scale
@@ -94,6 +97,11 @@ function popolaValori(data){
         arr.push(data[i].variables.fourth);
         arr.push(data[i].variables.fifth);
         val.push(arr);
+        if(i==0){  // si esegue solo alla prima occorrenza
+            for(var k in data[i].variables){ // si popola l'array dei nomi delle variabili
+                varName.push(k);
+            }
+        }
     };
     calcolaScalePosition();
 }
@@ -107,10 +115,45 @@ function drawAxes(){
         .attr("transform", "translate(0," + height + ")")
         .call(xAxis);
 
+    // label per l'asse x
+    svg.append("text")
+        .attr("class", "xlabel")
+        .attr("transform", "translate(" + (width) + " ," + (height-10) + ")")
+        .attr("font-size","15px")
+        .style("text-anchor", "end")
+        .text(varName[0]);  // visualizza la prima variabile dell'array sull'asse x
+
     // disegna l'asse y
     svg.append("g")
         .attr("class", "y axis")
         .call(yAxis);
+
+    // label per l'asse y
+    svg.append("text")
+        .attr("class", "ylabel")
+       .attr("transform", "rotate(-90)")
+       .attr("y", 15)
+       .attr("font-size","15px")
+       .style("text-anchor", "end")
+       .text(varName[1]);  // visualizza la seconda variabile dell'array sull'asse y
+
+    // intestazione del grafo
+    svg.append("text")
+       .attr("y", 0)
+       .attr("x", 30+(width/2))
+       .attr("font-size","20px")
+       .style("text-anchor", "end")
+       .text("Farfalle");
+}
+
+// Funzione che effettua la rotazione dei nomi delle variabili nell'arrai varName
+// in accordo con la rotazione dei valori
+function ruotaNomi(){
+    let a = varName[0];
+        for(let i = 0; i<4; i++){  // si ignorano gli elementi in posizione zero ed uno
+            varName[i] = varName[i+1];
+        }
+        varName[4] = a;
 }
 
 // Funzione che ruota di una posizione i valori dell'array "val"
@@ -122,12 +165,16 @@ function ruotaValori(){
         }
         val[c][6] = a;
     }
+    ruotaNomi();
 }
 
 function updateAxes(){
     // ".y.axis" selects elements that have both classes "y" and "axis", that is: class="y axis"
     svg.select(".y.axis").transition().duration(updateTime/2).call(yAxis);
     svg.select(".x.axis").transition().duration(updateTime/2).call(xAxis);
+    // aggiornamento delle label visualizzate sugli assi
+    svg.select(".xlabel").transition().duration(updateTime/2).text(varName[0]);
+    svg.select(".ylabel").transition().duration(updateTime/2).text(varName[1]);
 }
 
 // Funzione attivata dal click sulla farfalla, che invoca la rotazione
