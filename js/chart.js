@@ -1,6 +1,6 @@
 // Lista dei colori in tonalità pastello: red, green, yellow, blue, black, pink, gray, orange, brown, purple
 var colour = ["#E74C3C", "#27AE60", "#F1C40F", "#2980B9", "#5D6D7E", "#F6CEE3", "#B2BABB", "#EB984E", "#795548", "#9B59B6"];
-var margin = {top: 20, right: 20, bottom: 30, left: 40}; // margini
+var margin = {top: 20, right: 20, bottom: 80, left: 40}; // margini
 var updateTime = 2000; // tempo di transizione per le animazioni
 
 // Dimensioni totali dell'immagine
@@ -8,8 +8,8 @@ var totalHeight = 600;
 var totalWidth = 800;
 
 // Dimensioni min e max per la rappresentazione delle farfalle
-var maxDim = 2;
-var minDim = 0.5;
+var maxDim = 2.2;
+var minDim = 0.8;
 
 // Definizione delle scale  per posizione e dimensioni
 var scalePositionX = d3.scaleLinear();
@@ -26,7 +26,7 @@ var height = totalHeight - margin.top - margin.bottom;
 
 var svg = d3.select("body").append("svg")
 .attr("width", totalWidth) 
-.attr("height", totalHeight)
+.attr("height", (totalHeight))
 .append("g")
 .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
@@ -120,8 +120,9 @@ function drawAxes(){
         .attr("class", "xlabel")
         .attr("transform", "translate(" + (width) + " ," + (height-10) + ")")
         .attr("font-size","15px")
+       .style("font-family", "verdana")
         .style("text-anchor", "end")
-        .text(varName[0]);  // visualizza la prima variabile dell'array sull'asse x
+        .text(varName[0]+" var.");  // visualizza la prima variabile dell'array sull'asse x
 
     // disegna l'asse y
     svg.append("g")
@@ -132,18 +133,30 @@ function drawAxes(){
     svg.append("text")
         .attr("class", "ylabel")
        .attr("transform", "rotate(-90)")
-       .attr("y", 15)
+       .attr("y", 20)
        .attr("font-size","15px")
+       .style("font-family", "verdana")
        .style("text-anchor", "end")
-       .text(varName[1]);  // visualizza la seconda variabile dell'array sull'asse y
+       .text(varName[1]+" var.");  // visualizza la seconda variabile dell'array sull'asse y
 
     // intestazione del grafo
     svg.append("text")
        .attr("y", 0)
-       .attr("x", 30+(width/2))
-       .attr("font-size","20px")
-       .style("text-anchor", "end")
+       .attr("x", (width/2))
+       .attr("font-size","25px")
+       .style("font-family", "verdana")
+       .style("text-anchor", "middle")
        .text("Farfalle");
+
+    // label per le dimensioni
+    svg.append("text")
+       .attr("class", "dimensionLabel")
+       .attr("y", height+50)
+       .attr("x", (width/2))
+       .attr("font-size","12px")
+       .style("font-family", "verdana")
+       .style("text-anchor", "middle")
+       .text("Dimensions: wings = "+varName[2]+" variable, head = "+varName[3]+" variable, body = "+varName[4]+" variable");
 }
 
 // Funzione che effettua la rotazione dei nomi delle variabili nell'arrai varName
@@ -173,8 +186,10 @@ function updateAxes(){
     svg.select(".y.axis").transition().duration(updateTime/2).call(yAxis);
     svg.select(".x.axis").transition().duration(updateTime/2).call(xAxis);
     // aggiornamento delle label visualizzate sugli assi
-    svg.select(".xlabel").transition().duration(updateTime/2).text(varName[0]);
-    svg.select(".ylabel").transition().duration(updateTime/2).text(varName[1]);
+    svg.select(".xlabel").transition().duration(updateTime/2).text(varName[0]+" var.");
+    svg.select(".ylabel").transition().duration(updateTime/2).text(varName[1]+" var.");
+    svg.select(".dimensionLabel").transition().duration(updateTime/2).text("Dimensions: wings = "+varName[2]
+    	+" variable, head = "+varName[3]+" variable, body = "+varName[4]+" variable");
 }
 
 // Funzione attivata dal click sulla farfalla, che invoca la rotazione
@@ -243,20 +258,25 @@ function updateDraw(){
 
     teste.exit().remove();
 
+    // Per alcune configurazioni di grandezza testa-corpo si nota che questi due elementi tendo a sovrapporsi.
+    // Per limitare tale fenomeno è stato aggiunto alla traslazione verticale un valore proporzionale alla dimensione del corpo.
+    // Le teste sono state traslate verso l'alto di un valore pari al quadrato della scala del corpo
     teste.enter().append("path")
         .attr("id", function(d){
             return d[0];
         })
         .attr("class", "testa")
         .attr("d", "M -2.7 -18.2 L 0 -12.2 C -7.5 -6.2 7.5 -6.2 0 -12.2 L 2.7 -18.2 L 0 -12.2 Z")
-        .attr("transform", function(d) { return "translate("+scalePositionX(d[2])+","+scalePositionY(d[3])+") scale("+scaleDimension(d[5])+")" })
+        .attr("transform", function(d) { return "translate("+scalePositionX(d[2])+","+(scalePositionY(d[3])-Math.pow(scaleDimension(d[6]),3))+") scale("+
+        	scaleDimension(d[5])+")" })  
         .attr("fill", function(d) {return getColour(d[1])})
         .attr("stroke-width", "1")
         .attr("stroke", "black")
         .attr("onclick", function(d) { return "action()"});
 
     teste.transition().duration(updateTime)
-    .attr("transform", function(d) { return "translate("+scalePositionX(d[2])+","+scalePositionY(d[3])+") scale("+scaleDimension(d[5])+")" })
+    .attr("transform", function(d) { return "translate("+scalePositionX(d[2])+","+(scalePositionY(d[3])-Math.pow(scaleDimension(d[6]),3))+") scale("+
+    	scaleDimension(d[5])+")" })
 }
 
 // Inizializzazione
@@ -273,3 +293,16 @@ d3.json("data/dataset.json").then(function(data) {
     console.log(error); // Some error handling here
     
 });
+
+// NOTE:
+// Quando le teste risultano eccessivamente più piccole dei relativi corpi
+// queste tendo a sovrapporsi ad essi. Con la scala di dimensioni utilizzata
+// e l'aggiunta di una traslazione verticale pari al quadrato della scala 
+// delle dimensioni, le teste sono comunque distinguibili dai corpi, ma occorrerebbe 
+// implementare una funzione che gestisca in modo più preciso le traslazioni 
+// delle teste per evitare tale fenomeno. Nello specifico, la funzione 
+// dovrebbe tener conto delle dimensioni in pixel dei corpi, delle ali e 
+// delle teste, e quindi delle reali dimensioni a fronte delle successive 
+// trasformazioni. Da questi valori si dovrebbe poi ricavare la differenza 
+// delle dimensioni a monte della trasformazione e ricavare poi la reale 
+// traslazione da applicare ad ogni elemnto.
