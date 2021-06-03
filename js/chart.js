@@ -1,7 +1,9 @@
 // Lista dei colori in tonalità pastello: red, green, yellow, blue, black, pink, gray, orange, brown, purple
 var colour = ["#E74C3C", "#27AE60", "#F1C40F", "#2980B9", "#5D6D7E", "#F6CEE3", "#B2BABB", "#EB984E", "#795548", "#9B59B6"];
 var margin = {top: 20, right: 20, bottom: 80, left: 40}; // margini
-var updateTime = 2000; // tempo di transizione per le animazioni
+var updateTime = 1500; // tempo di transizione per le animazioni
+
+var spl = 0.7  // esponente per l'area secondo la Steven's powel law
 
 // Dimensioni totali dell'immagine
 var totalHeight = 600;
@@ -73,7 +75,7 @@ function calcolaScalePosition(){
     scalePositionY.domain([Ymin, Ymax]);
     scalePositionY.range([height-60, 60]);
     // scala per le dimensioni
-    scaleDimension.domain([dimMin, dimMax]);
+    scaleDimension.domain([Math.pow(dimMin,spl), Math.pow(dimMax,spl)]);
     scaleDimension.range([minDim, maxDim]);
 
     // assegnazione scala asse x
@@ -210,7 +212,9 @@ function getColour(colNumber){
     return colour[colNumber];
 }
 
-// funzione che si uccupa della rappresentazione delle farfalle nelle loro 3 parti
+// Funzione che si uccupa della rappresentazione delle farfalle nelle loro 3 parti.
+// Alla scala delle dimensioni viene passato il valore della variabile elevato per
+// spl, cioè il valore dell'esponente della Steven's power law associato alle aree.
 function updateDraw(){
 
     //gestione delle ali
@@ -224,14 +228,14 @@ function updateDraw(){
         })
         .attr("class", "ali")
         .attr("d", "M 0 0 C 25 -50 37.5 0 7.5 0 C 25 12.5 7.5 30 0 0 C -7.5 30 -25 12.5 -7.5 0 C -37.5 0 -25 -50 0 0")
-        .attr("transform", function(d) { return "translate("+scalePositionX(d[2])+","+scalePositionY(d[3])+") scale("+scaleDimension(d[4])+")" })
+        .attr("transform", function(d) { return "translate("+scalePositionX(d[2])+","+scalePositionY(d[3])+") scale("+scaleDimension(Math.pow(d[4],spl))+")" })
         .attr("fill", function(d) {return getColour(d[1])})
         .attr("stroke-width", "1")
         .attr("stroke", "black")
         .attr("onclick", function(d) { return "action()"});
 
     ali.transition().duration(updateTime)
-    .attr("transform", function(d) { return "translate("+scalePositionX(d[2])+","+scalePositionY(d[3])+") scale("+scaleDimension(d[4])+")" })
+    .attr("transform", function(d) { return "translate("+scalePositionX(d[2])+","+scalePositionY(d[3])+") scale("+scaleDimension(Math.pow(d[4],spl))+")" })
 
     //gestione degli addomi
     var addomi = svg.selectAll(".addome").data(val);
@@ -244,39 +248,49 @@ function updateDraw(){
         })
         .attr("class", "addome")
         .attr("d", "M -2 0 C -2 -13 2 -13 2 0 C 2 13 -2 13 -2 0")
-        .attr("transform", function(d) { return "translate("+scalePositionX(d[2])+","+scalePositionY(d[3])+") scale("+scaleDimension(d[6])+")" })
+        .attr("transform", function(d) { return "translate("+scalePositionX(d[2])+","+scalePositionY(d[3])+") scale("+scaleDimension(Math.pow(d[6],spl))+")" })
         .attr("fill", function(d) {return getColour(d[1])})
         .attr("stroke-width", "1")
         .attr("stroke", "black")
         .attr("onclick", function(d) { return "action()"});
 
     addomi.transition().duration(updateTime)
-    .attr("transform", function(d) { return "translate("+scalePositionX(d[2])+","+scalePositionY(d[3])+") scale("+scaleDimension(d[6])+")" })
+    .attr("transform", function(d) { return "translate("+scalePositionX(d[2])+","+scalePositionY(d[3])+") scale("+scaleDimension(Math.pow(d[6],spl))+")" })
 
     //gestione delle teste
     var teste = svg.selectAll(".testa").data(val);
 
     teste.exit().remove();
 
-    // Per alcune configurazioni di grandezza testa-corpo si nota che questi due elementi tendo a sovrapporsi.
-    // Per limitare tale fenomeno è stato aggiunto alla traslazione verticale un valore proporzionale alla dimensione del corpo.
-    // Le teste sono state traslate verso l'alto di un valore pari al quadrato della scala del corpo
+    // Per alcune configurazioni di grandezza testa-corpo si nota che questi due 
+    // elementi tendo a sovrapporsi. Per limitare tale fenomeno è stato aggiunto 
+    // alla traslazione verticale un valore proporzionale alla dimensione del corpo.
+    // Le teste sono state traslate verso l'alto di un valore di correzione 
+    // ottenuto come differenza della scala delle dimensioni testa-corpo.
     teste.enter().append("path")
         .attr("id", function(d){
             return d[0];
         })
         .attr("class", "testa")
         .attr("d", "M -2.7 -18.2 L 0 -12.2 C -7.5 -6.2 7.5 -6.2 0 -12.2 L 2.7 -18.2 L 0 -12.2 Z")
-        .attr("transform", function(d) { return "translate("+scalePositionX(d[2])+","+(scalePositionY(d[3])-Math.pow(scaleDimension(d[6]),3))+") scale("+
-        	scaleDimension(d[5])+")" })  
+        .attr("transform", function(d) { 
+        	let correction = 4*(scaleDimension(d[6])-scaleDimension(d[5]));
+        	return "translate("+scalePositionX(d[2])+","+
+        	(scalePositionY(d[3])-correction)+
+        	") scale("+scaleDimension(Math.pow(d[5],spl))+")";
+        })  
         .attr("fill", function(d) {return getColour(d[1])})
         .attr("stroke-width", "1")
         .attr("stroke", "black")
         .attr("onclick", function(d) { return "action()"});
 
     teste.transition().duration(updateTime)
-    .attr("transform", function(d) { return "translate("+scalePositionX(d[2])+","+(scalePositionY(d[3])-Math.pow(scaleDimension(d[6]),3))+") scale("+
-    	scaleDimension(d[5])+")" })
+    .attr("transform", function(d) { 
+        	let correction = 4*(scaleDimension(d[6])-scaleDimension(d[5]));
+        	return "translate("+scalePositionX(d[2])+","+
+        	(scalePositionY(d[3])-correction)+
+        	") scale("+scaleDimension(Math.pow(d[5],spl))+")";
+        })
 }
 
 // Inizializzazione
@@ -297,8 +311,8 @@ d3.json("data/dataset.json").then(function(data) {
 // NOTE:
 // Quando le teste risultano eccessivamente più piccole dei relativi corpi
 // queste tendo a sovrapporsi ad essi. Con la scala di dimensioni utilizzata
-// e l'aggiunta di una traslazione verticale pari al quadrato della scala 
-// delle dimensioni, le teste sono comunque distinguibili dai corpi, ma occorrerebbe 
+// e l'aggiunta di una traslazione verticale, con il fattore di correzione,
+// le teste sono comunque distinguibili dai corpi, ma occorrerebbe 
 // implementare una funzione che gestisca in modo più preciso le traslazioni 
 // delle teste per evitare tale fenomeno. Nello specifico, la funzione 
 // dovrebbe tener conto delle dimensioni in pixel dei corpi, delle ali e 
